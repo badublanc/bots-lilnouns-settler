@@ -1,0 +1,16 @@
+name = "bots-lilnouns-settler"
+main = "src/index.ts"
+compatibility_date = "2022-06-29"
+account_id = "4705ffc1b2306b394e91eeda4a7a150a"
+usage_model = "bundled"
+workers_dev = true
+
+[vars]
+RPC = 'https://rpc.ankr.com/eth'
+WKEY = '0x...'
+
+[triggers]
+crons = ['* * * * *']
+
+[env.prod]
+workers_dev = true
