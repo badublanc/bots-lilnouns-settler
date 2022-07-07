@@ -18,32 +18,46 @@ const Handler = async (event: ScheduledEvent, env: EnvironmentVars) => {
 
   const currentTime = dayjs();
   const endOfAuction = dayjs.unix(BigNumber.from(auction.endTime).toNumber());
-  const lagPeriod = endOfAuction.add(env.LAG_PERIOD, "minutes");
+  const lagTime = Number(env.LAG_TIME);
+  const lagPeriod = endOfAuction.add(lagTime, "minutes");
 
-  // console.log("eoa:", endOfAuction);
-  // console.log("end of lag period:", lagPeriod);
-  // console.log("current:", currentTime);
-  // console.log(now.isSameOrAfter(lagPeriod));
+  const parsedGasLimit =
+    typeof env.GAS_LIMIT !== "string"
+      ? env.GAS_LIMIT.toString()
+      : env.GAS_LIMIT;
 
-  if (currentTime.isSameOrAfter(endOfAuction)) {
-    if (id % 10 === 9) {
+  if (id % 10 === 9) {
+    if (currentTime.isSameOrAfter(endOfAuction)) {
       if (currentTime.isSameOrAfter(lagPeriod)) {
-        console.log(`attempting to settle auction ${id}...`);
-        const wallet = new ethers.Wallet(env.WKEY).connect(provider);
-        Contract = new ethers.Contract(LilNouns.address, LilNouns.abi, wallet);
-        try {
-          await Contract.settleCurrentAndCreateNewAuction();
-        } catch (error) {
-          console.log("something went wrong...", error);
+        const currentGas = await provider.getGasPrice();
+        const gasLimit = ethers.utils.parseUnits(parsedGasLimit, "gwei");
+
+        if (currentGas.lte(gasLimit)) {
+          console.log(`attempting to settle auction ${id}...`);
+          const wallet = new ethers.Wallet(env.WKEY).connect(provider);
+          Contract = new ethers.Contract(
+            LilNouns.address,
+            LilNouns.abi,
+            wallet
+          );
+          try {
+            // await Contract.settleCurrentAndCreateNewAuction();
+          } catch (error) {
+            console.log("something went wrong...", error);
+          }
+        } else {
+          console.log(
+            `auction ${id}. gas too high (${currentGas}). skipping remaining checks`
+          );
         }
       } else {
         console.log(`lag period for auction ${id} not over...`);
       }
     } else {
-      console.log(`auction ${id}. skipping remaining checks...`);
+      console.log(`auction ${id} not over...`);
     }
   } else {
-    console.log(`auction ${id} not over...`);
+    console.log(`auction ${id}. skipping remaining checks...`);
   }
 };
 

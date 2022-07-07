@@ -1,5 +1,6 @@
 export interface EnvironmentVars {
-  LAG_PERIOD: number;
+  LAG_TIME: number | string;
+  GAS_LIMIT: number | string;
   RPC: string;
   WKEY: string;
 }
