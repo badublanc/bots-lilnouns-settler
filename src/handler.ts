@@ -41,7 +41,7 @@ const Handler = async (event: ScheduledEvent, env: EnvironmentVars) => {
             wallet
           );
           try {
-            // await Contract.settleCurrentAndCreateNewAuction();
+            await Contract.settleCurrentAndCreateNewAuction();
           } catch (error) {
             console.log("something went wrong...", error);
           }
