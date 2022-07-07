@@ -5,12 +5,16 @@ account_id = "4705ffc1b2306b394e91eeda4a7a150a"
 usage_model = "bundled"
 workers_dev = true
 
-[vars]
-RPC = 'https://rpc.ankr.com/eth'
-WKEY = '0x...'
-
 [triggers]
 crons = ['* * * * *']
 
+[vars]
+LAG_PERIOD = 15
+RPC = 'https://rpc.ankr.com/eth/'
+WKEY = ''
+
 [env.prod]
-workers_dev = true
+name = "prod-bots-lilnouns-settler"
+
+[env.prod.vars]
+LAG_PERIOD = 15
