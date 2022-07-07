@@ -9,7 +9,7 @@ workers_dev = true
 crons = ['* * * * *']
 
 [vars]
-LAG_TIME = 15
+LAG_TIME = '15'
 GAS_LIMIT = '35'
 RPC = 'https://rpc.ankr.com/eth/'
 WKEY = ''
@@ -18,5 +18,5 @@ WKEY = ''
 name = "prod-bots-lilnouns-settler"
 
 [env.prod.vars]
-LAG_TIME = 15
+LAG_TIME = '15'
 GAS_LIMIT = '35'
