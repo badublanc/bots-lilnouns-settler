@@ -16,49 +16,52 @@ const Handler = async (event: ScheduledEvent, env: EnvironmentVars) => {
   let auction = await Contract.auction();
   const id = BigNumber.from(auction.nounId).toNumber();
 
+  if (id % 10 !== 9) {
+    console.log(`auction ${id}. skipping remaining checks...`);
+    return;
+  }
+
   const currentTime = dayjs();
   const endOfAuction = dayjs.unix(BigNumber.from(auction.endTime).toNumber());
-  const lagTime = Number(env.LAG_TIME);
-  const lagPeriod = endOfAuction.add(lagTime, "minutes");
 
-  const parsedGasLimit =
-    typeof env.GAS_LIMIT !== "string"
-      ? env.GAS_LIMIT.toString()
-      : env.GAS_LIMIT;
-
-  if (id % 10 === 9) {
-    if (currentTime.isSameOrAfter(endOfAuction)) {
-      if (currentTime.isSameOrAfter(lagPeriod)) {
-        const currentGas = await provider.getGasPrice();
-        const gasLimit = ethers.utils.parseUnits(parsedGasLimit, "gwei");
-
-        if (currentGas.lte(gasLimit)) {
-          console.log(`attempting to settle auction ${id}...`);
-          const wallet = new ethers.Wallet(env.WKEY).connect(provider);
-          Contract = new ethers.Contract(
-            LilNouns.address,
-            LilNouns.abi,
-            wallet
-          );
-          try {
-            await Contract.settleCurrentAndCreateNewAuction();
-          } catch (error) {
-            console.log("something went wrong...", error);
-          }
-        } else {
-          console.log(
-            `auction ${id}. gas too high (${currentGas}). skipping remaining checks`
-          );
-        }
-      } else {
-        console.log(`lag period for auction ${id} not over...`);
-      }
-    } else {
-      console.log(`auction ${id} not over...`);
-    }
-  } else {
-    console.log(`auction ${id}. skipping remaining checks...`);
+  if (currentTime.isBefore(endOfAuction)) {
+    console.log(`auction ${id} is still active. skipping remaining checks...`);
+    return;
   }
+
+  const lagTime = Number(env.LAG_TIME);
+  const endOfLagPeriod = endOfAuction.add(lagTime, "minutes");
+
+  if (currentTime.isBefore(endOfLagPeriod)) {
+    console.log(
+      `lag period for auction ${id} not over. skipping remaining checks...`
+    );
+    return;
+  }
+
+  const gasLimit = ethers.utils.parseUnits(env.GAS_LIMIT, "gwei");
+  const currentGas = await provider.getGasPrice();
+
+  if (currentGas.gt(gasLimit)) {
+    console.log(
+      `auction ${id}. gas too high (${currentGas}). skipping remaining checks...`
+    );
+    return;
+  }
+
+  console.log(`attempting to settle auction ${id}...`);
+
+  const wallet = new ethers.Wallet(env.WKEY).connect(provider);
+  Contract = new ethers.Contract(LilNouns.address, LilNouns.abi, wallet);
+
+  try {
+    await Contract.settleCurrentAndCreateNewAuction();
+    console.log("txn sent...");
+  } catch (error) {
+    console.log("something went wrong...", error);
+  }
+
+  return;
 };
 
 export default Handler;
