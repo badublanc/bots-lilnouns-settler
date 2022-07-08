@@ -1,10 +1,7 @@
 import type { EnvironmentVars } from "./types";
-import { ethers, BigNumber } from "ethers";
 import LilNouns from "./contract.json";
-
+import { ethers } from "ethers";
 import dayjs from "dayjs";
-import isSameOrAfter from "dayjs/plugin/isSameOrAfter";
-dayjs.extend(isSameOrAfter);
 
 const Handler = async (event: ScheduledEvent, env: EnvironmentVars) => {
   const provider = new ethers.providers.StaticJsonRpcProvider({
@@ -14,18 +11,18 @@ const Handler = async (event: ScheduledEvent, env: EnvironmentVars) => {
   let Contract = new ethers.Contract(LilNouns.address, LilNouns.abi, provider);
 
   let auction = await Contract.auction();
-  const id = BigNumber.from(auction.nounId).toNumber();
+  const id = auction.nounId.toNumber();
 
   if (id % 10 !== 9) {
-    console.log(`auction ${id}. skipping remaining checks...`);
+    console.log(`SKIP :: Auction ${id}`);
     return;
   }
 
   const currentTime = dayjs();
-  const endOfAuction = dayjs.unix(BigNumber.from(auction.endTime).toNumber());
+  const endOfAuction = dayjs.unix(auction.endTime.toNumber());
 
   if (currentTime.isBefore(endOfAuction)) {
-    console.log(`auction ${id} is still active. skipping remaining checks...`);
+    console.log(`SKIP :: Auction ${id} :: Active auction`);
     return;
   }
 
@@ -33,9 +30,7 @@ const Handler = async (event: ScheduledEvent, env: EnvironmentVars) => {
   const endOfLagPeriod = endOfAuction.add(lagTime, "minutes");
 
   if (currentTime.isBefore(endOfLagPeriod)) {
-    console.log(
-      `lag period for auction ${id} not over. skipping remaining checks...`
-    );
+    console.log(`SKIP :: Auction ${id} :: In lag period`);
     return;
   }
 
@@ -43,22 +38,20 @@ const Handler = async (event: ScheduledEvent, env: EnvironmentVars) => {
   const currentGas = await provider.getGasPrice();
 
   if (currentGas.gt(gasLimit)) {
-    console.log(
-      `auction ${id}. gas too high (${currentGas}). skipping remaining checks...`
-    );
+    console.log(`SKIP :: Auction ${id} :: Gas too high (${currentGas})`);
     return;
   }
 
-  console.log(`attempting to settle auction ${id}...`);
+  console.log(`INITIATE :: Auction ${id} :: Settlement attempt`);
 
   const wallet = new ethers.Wallet(env.WKEY).connect(provider);
   Contract = new ethers.Contract(LilNouns.address, LilNouns.abi, wallet);
 
   try {
     await Contract.settleCurrentAndCreateNewAuction();
-    console.log("txn sent...");
+    console.log(`PROCESSED :: Auction ${id}`);
   } catch (error) {
-    console.log("something went wrong...", error);
+    console.log("ERROR ::", error);
   }
 
   return;
