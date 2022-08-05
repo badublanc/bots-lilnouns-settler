@@ -20,3 +20,5 @@ name = "prod-bots-lilnouns-settler"
 [env.prod.vars]
 LAG_TIME = '15'
 GAS_LIMIT = '35'
+# RPC - stored as encrypted secret in Cloudflare in prod
+# WKEY - stored as encrypted secret in Cloudflare in prod
